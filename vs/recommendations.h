@@ -1,7 +1,7 @@
 #pragma once
 #include "user_data.h"
 
-using media_values = vector<pair<int, double>>;
+using media_values = vector<pair<media_id, double>>;
 
-pair<media_values, media_values> recommendations
+map<media_type, media_values> recommendations
 	(const string& name, redis& data_store);

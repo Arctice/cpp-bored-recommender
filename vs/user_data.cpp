@@ -1,5 +1,7 @@
 #include "user_data.h"
 #include <sstream>
+#include <set>
+
 vector<pair<int, int>> parse_scores(const string& stored_string){
 	vector<pair<int, int>> scores;
 
@@ -20,22 +22,38 @@ vector<pair<int, int>> parse_scores(const string& stored_string){
 }
 
 user_scores get_scores(const string& name, redis& data_store, bool only_rated){
-	user_scores scores;
-	// can we write this better with hana?
+	user_scores scores{name};
+
 	for(auto& type:
-		{make_pair(ref(scores.manga), string("manga")),
-		 make_pair(ref(scores.anime), string("anime")),})
+		{make_pair(MANGA, string("manga")),
+		 make_pair(ANIME, string("anime")),})
 	{
 		data_store.hget("user_lists", name + ":" + type.second,
 			[&](cpp_redis::reply& reply){
-				if(!reply.is_null())
-					for(const auto& score:parse_scores(reply.as_string()))
-						if(!only_rated || score.second != 0)
-							type.first[score.first] = score.second;
+				if(reply.is_null())
+					return;
+				for(const auto& score:parse_scores(reply.as_string()))
+					if(!only_rated || score.second != 0){
+						media_id id = {type.first, score.first};
+						scores.scores[id] = score.second;
+					}
 			});
 	}
 	data_store.sync_commit();
 	return scores;
+}
+
+vector<string> all_usernames(redis& data_store){
+	set<string> usernames;
+	data_store.hkeys("user_lists", [&](cpp_redis::reply& reply){
+		auto names = reply.as_array();
+		for(const auto& key:names){
+			auto name = key.as_string();
+			usernames.insert(name.substr(0, name.size()-6));
+		}
+	});
+	data_store.sync_commit();
+	return vector<string>(usernames.begin(), usernames.end());
 }
 
 vector<string> all_usernames(media_type type, redis& data_store){

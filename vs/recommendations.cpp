@@ -2,120 +2,86 @@
 #include <cmath>
 
 double pearson_correlation
-(const user_scores& active, string user, redis& data_store)
+(const map<media_id, double>& act, const map<media_id, int>& ngh)
 {
-	auto neighbour = get_scores(user, data_store);
-	map<pair<media_type, int>, int> act, ngh;
-
-	double mean_act = 0, mean_ngh = 0;
-
-	for(auto const& score:neighbour.manga){
-		ngh[make_pair(MANGA, score.first)] = score.second;
-		mean_ngh += score.second;
-	}
-	for(auto const& score:active.manga){
-		if(score.second==0) continue;
-		act[make_pair(MANGA, score.first)] = score.second;
-		mean_act += score.second;
-	}
-
-	for(auto const& score:neighbour.anime){
-		ngh[make_pair(ANIME, score.first)] = score.second;
-		mean_ngh += score.second;
-	}
-	for(auto const& score:active.anime){
-		if(score.second==0) continue;
-		act[make_pair(ANIME, score.first)] = score.second;
-		mean_act += score.second;
-	}
-
-	mean_act /= act.size();
+	double mean_ngh = 0;
+	for(auto const& score:ngh) mean_ngh += score.second;
 	mean_ngh /= ngh.size();
-
+	
 	double numerator = 0, den_act = 0, den_ngh = 0;
 	int count = 0;
 	for(const auto val:ngh){
 		if(!act.count(val.first))
 			continue;
 		count++;
-		double co_act = act[val.first]-mean_act;
 		double co_ngh = val.second-mean_ngh;
-		numerator += co_act*co_ngh;
-		den_act += co_act*co_act;
+		numerator += act.at(val.first)*co_ngh;
+		den_act += act.at(val.first)*act.at(val.first);
 		den_ngh += co_ngh*co_ngh;
 	}
-	if(!count){
-		return 0;
-	}
+	if(!count) return 0;
 	return numerator/sqrt(den_act*den_ngh);
 }
 
-media_values media_score_values
-(user_scores source, media_type type, redis& data_store)
+map<media_type, media_values> media_score_values
+(user_scores source, redis& data_store)
 {
-	map<int, double> media_weights;
-	map<int, int> rating_counts;
+	map<media_id, double> media_weights;
+	map<media_id, int> rating_counts;
+	auto source_rated = get_scores(source.name, data_store);
 
-	for(const auto& user:all_usernames(type, data_store)){
+	// some early compute
+	map<media_id, double> active_array;
+	double mean = 0;
+	for(auto const& score:source_rated.scores)
+		mean += score.second;
+	mean /= source_rated.scores.size();
+	for(auto const& score:source_rated.scores)
+		active_array[score.first] = score.second - mean;
 
-		double user_weight = pearson_correlation(source, user, data_store);
-		auto scores = get_scores(user, data_store);
+	for(const auto& user:all_usernames(data_store)){
 
-		if(!user_weight||std::isnan(user_weight))
+		auto scores = get_scores(user, data_store).scores;
+		double user_weight = pearson_correlation(active_array, scores);
+		
+		if(!user_weight || std::isnan(user_weight))
 			continue;
-
-		if(type==ANIME){
-			for(const auto& score:scores.anime){
-				media_weights[score.first] += score.second * user_weight;
-				rating_counts[score.first] += 1;
-			}
-		}
-		else{
-			for(const auto& score:scores.manga){
-				media_weights[score.first] += score.second * user_weight;
-				rating_counts[score.first] += 1;
-			}
+		
+		for(const auto& score : scores){
+			media_weights[score.first] += score.second * user_weight;
+			rating_counts[score.first] += 1;
 		}
 	}
 
-	media_values values;
+	map<media_type, media_values> values;
 
-	for(auto& score:media_weights){
+	for(auto& score : media_weights){
+		auto type = score.first.first;
+		auto mal_id = score.first.second;
 		double rating = score.second/rating_counts[score.first];
+
 		if(rating_counts[score.first]>40)
-			values.push_back(make_pair(score.first, rating));
+			values[type].push_back({score.first, rating});
 	}
 
 	return values;
 }
 
-media_values type_recs
-(user_scores source, media_type type, redis& data_store)
+map<media_type, media_values> recommendations
+(const string& name, redis& data_store)
 {
-	auto media_weights = media_score_values(source, type, data_store);
+	auto source = get_scores("rainlife", data_store, false);
+	auto media_weights = media_score_values(source, data_store);
 
-	std::sort(media_weights.begin(), media_weights.end(),
-		[](const auto& a, const auto& b) { return a.second > b.second; });
-
-	vector<pair<int, double>> recommendations;
-
-	for(const auto& media:media_weights){
-		if(type==ANIME && source.anime.count(media.first))
-			continue;
-		if(type==MANGA && source.manga.count(media.first))
-			continue;
-		recommendations.push_back(media);
+	for(const auto& type:{ANIME, MANGA}){
+		std::sort(media_weights[type].begin(), media_weights[type].end(),
+			[](const auto& a, const auto& b) { return a.second > b.second; });
 	}
 
-	return recommendations;
-}
+	for(const auto& type:{ANIME, MANGA}){
+		remove_if(media_weights[type].begin(), media_weights[type].end(),
+			[&](auto elem){return source.scores.count(elem.first); });
+	}
 
-pair<media_values, media_values> recommendations
-	(const string& name, redis& data_store)
-{
-	auto lists = get_scores("rainlife", data_store, false);
-
-	auto recs_anime = type_recs(lists, ANIME, data_store);
-	auto recs_manga = type_recs(lists, MANGA, data_store);
-	return make_pair(recs_anime, recs_manga);
+	return media_weights;
 }

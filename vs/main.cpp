@@ -16,11 +16,11 @@ int main(){
 
 	cout<<"anime\n";
 	for(int i = 0; i<10; i++)
-		cout<<z.first[i].first<<": "<<z.first[i].second<<endl;
+		cout<< z[ANIME][i].first.second <<": "<<z[ANIME][i].second<<endl;
 
 	cout<<"\nmanga\n";
 	for(int i = 0; i<10; i++)
-		cout<<z.second[i].first<<": "<<z.second[i].second<<endl;
+		cout<<z[MANGA][i].first.second <<": "<<z[MANGA][i].second<<endl;
 
 	cin.get();
 }

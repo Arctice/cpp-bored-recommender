@@ -64,7 +64,8 @@ vector<pair<int, double>> media_score_values
 		double user_weight = pearson_correlation(source, user, data_store);
 		auto scores = get_scores(user, data_store);
 
-		if(std::isnan(user_weight)) continue;
+		if(!user_weight || std::isnan(user_weight))
+			continue;
 
 		if(type==ANIME){
 			for(const auto& score:scores.anime){

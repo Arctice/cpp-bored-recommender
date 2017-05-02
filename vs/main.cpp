@@ -107,11 +107,24 @@ auto recommendations
 	(user_scores source, media_type type,
 	 int cutoff, redis& data_store)
 {
-	auto r = media_score_values(source, type, data_store);
-	std::sort(r.begin(), r.end(), [](auto a, auto b){
+	auto media_weights = media_score_values(source, type, data_store);
+	
+	std::sort(media_weights.begin(), media_weights.end(),
+		[](const auto& a, const auto& b){
 		return a.second>b.second;
 	});
-	return r;
+
+	vector<pair<int, double>> recommendations;
+
+	for(const auto& media:media_weights){
+		if(type==ANIME && source.anime.count(media.first))
+			continue;
+		if(type==MANGA && source.manga.count(media.first))
+			continue;
+		recommendations.push_back(media);
+	}
+
+	return recommendations;
 }
 
 auto recs (const string& name, redis& data_store){
@@ -135,8 +148,6 @@ auto recs (const string& name, redis& data_store){
 	auto recs_manga = recommendations(taste, MANGA, 30, data_store);
 	return make_pair(recs_anime, recs_manga);
 }
-
-auto recs() {return std::vector<std::pair<int, double>>(); }
 
 int main(){
 	auto r = redis_connect();

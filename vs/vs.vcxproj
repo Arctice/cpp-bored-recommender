@@ -125,10 +125,12 @@
   <ItemGroup>
     <ClCompile Include="data_store.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="recommendations.cpp" />
     <ClCompile Include="user_data.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="data_store.h" />
+    <ClInclude Include="recommendations.h" />
     <ClInclude Include="user_data.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

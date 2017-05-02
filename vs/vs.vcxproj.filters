@@ -24,12 +24,18 @@
     <ClCompile Include="data_store.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="recommendations.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="user_data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="data_store.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="recommendations.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

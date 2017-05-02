@@ -19,19 +19,21 @@ vector<pair<int, int>> parse_scores(const string& stored_string){
 	return scores;
 }
 
-user_scores get_scores(const string& name, redis& data_store){
+user_scores get_scores(const string& name, redis& data_store, bool only_rated){
 	user_scores scores;
 	// can we write this better with hana?
 	for(auto& type:
 		{make_pair(ref(scores.manga), string("manga")),
-		 make_pair(ref(scores.anime), string("anime")),}){
-		data_store.hget("user_lists", name + ":" + type.second, [&](cpp_redis::reply& reply){
-			if(!reply.is_null())
-				for(const auto& score:parse_scores(reply.as_string()))
-					type.first[score.first] = score.second;
-		});
+		 make_pair(ref(scores.anime), string("anime")),})
+	{
+		data_store.hget("user_lists", name + ":" + type.second,
+			[&](cpp_redis::reply& reply){
+				if(!reply.is_null())
+					for(const auto& score:parse_scores(reply.as_string()))
+						if(!only_rated || score.second != 0)
+							type.first[score.first] = score.second;
+			});
 	}
-	data_store.commit();
 	data_store.sync_commit();
 	return scores;
 }

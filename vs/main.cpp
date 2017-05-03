@@ -2,6 +2,7 @@
 #include "data_store.h"
 #include "recommendations.h"
 #include <chrono>
+#include <thread>
 
 // seconds since epoch, hopefully portable, hopefully won't take us back in time
 auto time(){
@@ -14,21 +15,23 @@ auto time(){
 string jsonify(const map<media_type, media_values>& recs){
 	string json = "{\"anime\": [";
 
-	constexpr auto MAX_RECS = 25;
+	constexpr size_t MAX_RECS = 25;
 
-	for(int i = 0; i<MAX_RECS; ++i){
+	auto anime_recs_count = min(recs.at(ANIME).size(), MAX_RECS);
+	for(int i = 0; i<anime_recs_count; ++i){
 		auto id = recs.at(ANIME)[i].first.second;
 		json += to_string(id);
-		if(i<MAX_RECS-1)
+		if(i<anime_recs_count-1)
 			json += ", "s;
 	}
 
 	json += "], \"manga\": ["s;
 
-	for(int i = 0; i<MAX_RECS; ++i){
+	auto manga_recs_count = min(recs.at(MANGA).size(), MAX_RECS);
+	for(int i = 0; i<manga_recs_count; ++i){
 		auto id = recs.at(MANGA)[i].first.second;
 		json += to_string(id);
-		if(i<MAX_RECS-1)
+		if(i<manga_recs_count-1)
 			json += ", "s;
 	}
 
@@ -45,7 +48,7 @@ void recommendations_job(const string& job, redis& data_store){
 	cout<<"done "<<job<<endl;
 	data_store.hset(RECOMMENDATIONS_RAW, job, json);
 	data_store.rpop(RECOMMENDATION_QUEUE);
-	data_store.lpush(NEW_RECOMMENDATIONS, job);
+	data_store.lpush(NEW_RECOMMENDATIONS, {job});
 	data_store.sync_commit();
 }
 
@@ -66,7 +69,7 @@ int main(){
 		r->sync_commit();
 
 		if(job.empty()){
-			// sleep 2s
+			this_thread::sleep_for(chrono::seconds(2));
 			continue;
 		}
 

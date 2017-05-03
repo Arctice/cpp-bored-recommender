@@ -72,7 +72,7 @@ map<media_type, media_values> media_score_values
 map<media_type, media_values> recommendations
 (const string& name, redis& data_store)
 {
-	auto source = get_scores("rainlife", data_store, false);
+	auto source = get_scores(name, data_store, false);
 	auto media_weights = media_score_values(source, data_store);
 
 	for(const auto& type:{ANIME, MANGA}){

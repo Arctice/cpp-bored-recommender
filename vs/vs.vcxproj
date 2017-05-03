@@ -129,6 +129,7 @@
     <ClCompile Include="user_data.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="config.h" />
     <ClInclude Include="data_store.h" />
     <ClInclude Include="recommendations.h" />
     <ClInclude Include="user_data.h" />

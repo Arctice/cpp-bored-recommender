@@ -1,5 +1,6 @@
 #pragma once
 #include "user_data.h"
+#include <algorithm>
 
 using media_values = vector<pair<media_id, double>>;
 

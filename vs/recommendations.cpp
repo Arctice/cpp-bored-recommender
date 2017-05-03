@@ -1,23 +1,31 @@
 #include "recommendations.h"
 #include <cmath>
 
-double pearson_correlation
-(const map<media_id, double>& act, const map<media_id, int>& ngh)
+map<media_id, double> normalize_scores
+(const map<media_id, int>& scores)
 {
-	double mean_ngh = 0;
-	for(auto const& score:ngh) mean_ngh += score.second;
-	mean_ngh /= ngh.size();
-	
+	double mean = 0;
+	for(auto const& score:scores)
+		mean += score.second;
+	mean /= scores.size();
+
+	map<media_id, double> normalized;
+	for(const auto& score:scores)
+		normalized[score.first] = score.second-mean;
+	return normalized;
+}
+
+double pearson_correlation
+(const map<media_id, double>& act, const map<media_id, double>& ngh)
+{
 	double numerator = 0, den_act = 0, den_ngh = 0;
 	int count = 0;
 	for(const auto val:ngh){
-		if(!act.count(val.first))
-			continue;
+		if(!act.count(val.first)) continue;
 		count++;
-		double co_ngh = val.second-mean_ngh;
-		numerator += act.at(val.first)*co_ngh;
+		numerator += act.at(val.first)*val.second;
 		den_act += act.at(val.first)*act.at(val.first);
-		den_ngh += co_ngh*co_ngh;
+		den_ngh += val.second*val.second;
 	}
 	if(!count) return 0;
 	return numerator/sqrt(den_act*den_ngh);
@@ -28,21 +36,15 @@ map<media_type, media_values> media_score_values
 {
 	map<media_id, double> media_weights;
 	map<media_id, int> rating_counts;
-	auto source_rated = get_scores(source.name, data_store);
 
-	// some early compute
-	map<media_id, double> active_array;
-	double mean = 0;
-	for(auto const& score:source_rated.scores)
-		mean += score.second;
-	mean /= source_rated.scores.size();
-	for(auto const& score:source_rated.scores)
-		active_array[score.first] = score.second - mean;
+	auto active_arr = normalize_scores(
+		get_scores(source.name, data_store).scores);
 
 	for(const auto& user:all_usernames(data_store)){
 
 		auto scores = get_scores(user, data_store).scores;
-		double user_weight = pearson_correlation(active_array, scores);
+		double user_weight = pearson_correlation(
+			active_arr, normalize_scores(scores));
 		
 		if(!user_weight || std::isnan(user_weight))
 			continue;

@@ -30,7 +30,7 @@ double pearson_correlation
 	if(!count) return 0;
 
 	auto distance = numerator/sqrt(den_act*den_ngh);
-	distance *= min(count, 50.0)/50.0;
+	distance *= min(static_cast<double>(count), 50.0)/50.0;
 
 	return distance;
 }

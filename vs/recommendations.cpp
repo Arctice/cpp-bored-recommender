@@ -28,7 +28,11 @@ double pearson_correlation
 		den_ngh += val.second*val.second;
 	}
 	if(!count) return 0;
-	return numerator/sqrt(den_act*den_ngh);
+
+	auto distance = numerator/sqrt(den_act*den_ngh);
+	distance *= min(count, 50.0)/50.0;
+
+	return distance;
 }
 
 map<media_type, media_values> media_score_values

@@ -15,9 +15,9 @@ auto time(){
 string jsonify(const map<media_type, media_values>& recs){
 	string json = "{\"anime\": [";
 
-	constexpr size_t MAX_RECS = 25;
-
-	auto anime_recs_count = min(recs.at(ANIME).size(), MAX_RECS);
+	auto anime_recs_count = min(
+			recs.at(ANIME).size(),
+			(size_t)MAX_RECS);
 	for(int i = 0; i<anime_recs_count; ++i){
 		auto id = recs.at(ANIME)[i].first.second;
 		json += to_string(id);
@@ -27,7 +27,9 @@ string jsonify(const map<media_type, media_values>& recs){
 
 	json += "], \"manga\": ["s;
 
-	auto manga_recs_count = min(recs.at(MANGA).size(), MAX_RECS);
+	auto manga_recs_count = min(
+		recs.at(MANGA).size(),
+		(size_t)MAX_RECS);
 	for(int i = 0; i<manga_recs_count; ++i){
 		auto id = recs.at(MANGA)[i].first.second;
 		json += to_string(id);

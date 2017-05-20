@@ -4,13 +4,6 @@
 #include <chrono>
 #include <thread>
 
-// seconds since epoch, hopefully portable, hopefully won't take us back in time
-auto time(){
-	return std::chrono::duration_cast<std::chrono::seconds>
-		(std::chrono::system_clock::now().time_since_epoch())
-		.count();
-}
-
 // lazy
 string jsonify(const map<media_type, media_values>& recs){
 	string json = "{\"anime\": [";

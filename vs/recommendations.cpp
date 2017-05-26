@@ -1,7 +1,7 @@
 #include "recommendations.h"
 #include <cmath>
 
-map<media_id, double> normalize_scores
+pair<map<media_id, double>, double> normalize_scores
 (const map<media_id, int>& scores)
 {
 	double mean = 0;
@@ -12,25 +12,26 @@ map<media_id, double> normalize_scores
 	map<media_id, double> normalized;
 	for(const auto& score:scores)
 		normalized[score.first] = score.second-mean;
-	return normalized;
+
+	return {normalized, mean};
 }
 
 double pearson_correlation
 (const map<media_id, double>& act, const map<media_id, double>& ngh)
 {
 	double numerator = 0, den_act = 0, den_ngh = 0;
-	int count = 0;
+	int shared_count = 0;
 	for(const auto val:ngh){
 		if(!act.count(val.first)) continue;
-		count++;
+		shared_count++;
 		numerator += act.at(val.first)*val.second;
 		den_act += act.at(val.first)*act.at(val.first);
 		den_ngh += val.second*val.second;
 	}
-	if(!count) return 0;
+	if(!shared_count) return 0;
 
 	auto distance = numerator/sqrt(den_act*den_ngh);
-	distance *= min(static_cast<double>(count), 50.0)/50.0;
+	distance *= min(static_cast<double>(shared_count), 50.0)/50.0;
 
 	return distance;
 }
@@ -39,23 +40,31 @@ map<media_type, media_values> media_score_values
 (user_scores source, redis& data_store)
 {
 	map<media_id, double> media_weights;
+	map<media_id, double> weighted_rating_sums;
 	map<media_id, int> rating_counts;
-
-	auto active_arr = normalize_scores(
+	
+	auto active_user_data = normalize_scores(
 		get_scores(source.name, data_store).scores);
+	auto active_mean = active_user_data.second;
+	auto active_vector = active_user_data.first;
 
 	for(const auto& user:all_usernames(data_store)){
-
 		auto scores = get_scores(user, data_store).scores;
+		auto neighbour_data = normalize_scores(scores);
+		auto neighbour_vector = neighbour_data.first;
+		auto neighbour_mean = neighbour_data.second;
+
 		double user_weight = pearson_correlation(
-			active_arr, normalize_scores(scores));
+			active_vector, neighbour_vector);
 		
 		if(!user_weight || std::isnan(user_weight))
 			continue;
 		
 		for(const auto& score : scores){
-			media_weights[score.first] += score.second * user_weight;
-			rating_counts[score.first] += 1;
+			auto normalized_score = score.second - neighbour_mean;
+			media_weights[score.first] += normalized_score * user_weight;
+			weighted_rating_sums[score.first] += abs(user_weight);
+			rating_counts[score.first]++;
 		}
 	}
 
@@ -64,9 +73,9 @@ map<media_type, media_values> media_score_values
 	for(auto& score : media_weights){
 		auto type = score.first.first;
 		auto mal_id = score.first.second;
-		double rating = score.second/rating_counts[score.first];
+		double rating = score.second/weighted_rating_sums[score.first];
 
-		if(rating_counts[score.first]>40)
+		if(rating_counts[score.first]>1)
 			values[type].push_back({score.first, rating});
 	}
 

@@ -11,7 +11,7 @@ pair<map<media_id, double>, double> normalize_scores
 
 	map<media_id, double> normalized;
 	for(const auto& score:scores)
-		normalized[score.first] = score.second-mean;
+		normalized[score.first] = score.second - mean;
 
 	return {normalized, mean};
 }
@@ -24,9 +24,13 @@ double pearson_correlation
 	for(const auto val:ngh){
 		if(!act.count(val.first)) continue;
 		shared_count++;
-		numerator += act.at(val.first)*val.second;
-		den_act += act.at(val.first)*act.at(val.first);
-		den_ngh += val.second*val.second;
+		
+		auto co_act = act.at(val.first);
+		auto co_ngh = val.second;
+
+		numerator += co_act * co_ngh;
+		den_act += co_act * co_act;
+		den_ngh += co_ngh * co_ngh;
 	}
 	if(!shared_count) return 0;
 
@@ -73,9 +77,16 @@ map<media_type, media_values> media_score_values
 	for(auto& score : media_weights){
 		auto type = score.first.first;
 		auto mal_id = score.first.second;
-		double rating = score.second/weighted_rating_sums[score.first];
+		
+		auto total_weights = weighted_rating_sums[score.first];
+		if(total_weights < 1)
+			continue;
 
-		if(rating_counts[score.first]>1)
+		double rating = score.second /total_weights;
+		if(rating < 0)
+			continue;
+
+		if(rating_counts[score.first] > 40)
 			values[type].push_back({score.first, rating});
 	}
 
@@ -95,7 +106,7 @@ map<media_type, media_values> recommendations
 
 	for(const auto& type:{ANIME, MANGA}){
 		remove_if(media_weights[type].begin(), media_weights[type].end(),
-			[&](auto elem){return source.scores.count(elem.first); });
+			[&](auto elem){ return source.scores.count(elem.first); });
 	}
 
 	return media_weights;

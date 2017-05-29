@@ -52,6 +52,7 @@ void recommendations_job
 int main(){
 	string queue = RECOMMENDATION_QUEUE;
 
+	cout << "Preloading ratings\n";
 	auto r = redis_connect();
 
 	vector<user_scores> all_ratings;
@@ -59,6 +60,7 @@ int main(){
 		auto scores = get_scores(name, *r);
 		all_ratings.push_back(scores);
 	}
+	cout << "Done!\n";
 
 	while(true){
 		string job;

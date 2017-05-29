@@ -108,6 +108,8 @@ map<media_type, media_values> recommendations
 	auto source = get_scores(name, data_store, false);
 	auto media_weights = media_score_values(source, data_store);
 
+	auto rated_source = get_scores(name, data_store, true);
+
 	for(const auto& type:{ANIME, MANGA}){
 		std::sort(media_weights[type].begin(), media_weights[type].end(),
 			[](const auto& a, const auto& b) { return a.second > b.second; });
@@ -115,7 +117,7 @@ map<media_type, media_values> recommendations
 
 	for(const auto& type:{ANIME, MANGA}){
 		remove_if(media_weights[type].begin(), media_weights[type].end(),
-			[&](auto elem){ return source.scores.count(elem.first); });
+			[&](auto elem){ return rated_source.scores.count(elem.first); });
 	}
 
 	return media_weights;

@@ -1,6 +1,6 @@
 #pragma once
 
-#define RECOMMENDATION_QUEUE "recommendation_queue"
-#define RECOMMENDATIONS_RAW "recommendations"
-#define NEW_RECOMMENDATIONS "recently_processed"
+#define RECOMMENDATION_QUEUE "recommendation_queue_mem"
+#define RECOMMENDATIONS_RAW "recommendations_mem"
+#define NEW_RECOMMENDATIONS "recently_processed_mem"
 #define MAX_RECS 1000

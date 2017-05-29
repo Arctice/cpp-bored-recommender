@@ -43,9 +43,7 @@ double pearson_correlation
 map<media_type, media_values> media_score_values
 (user_scores source, redis& data_store)
 {
-	map<media_id, double> media_weights;
-	map<media_id, double> weighted_rating_sums;
-	map<media_id, int> rating_counts;
+	map<media_id, vector<pair<double, double>>> media_weights;
 	
 	auto active_user_data = normalize_scores(
 		get_scores(source.name, data_store).scores);
@@ -66,9 +64,7 @@ map<media_type, media_values> media_score_values
 		
 		for(const auto& score : scores){
 			auto normalized_score = score.second - neighbour_mean;
-			media_weights[score.first] += normalized_score * user_weight;
-			weighted_rating_sums[score.first] += abs(user_weight);
-			rating_counts[score.first]++;
+			media_weights[score.first].push_back({normalized_score, user_weight});
 		}
 	}
 
@@ -77,17 +73,30 @@ map<media_type, media_values> media_score_values
 	for(auto& score : media_weights){
 		auto type = score.first.first;
 		auto mal_id = score.first.second;
-		
-		auto total_weights = weighted_rating_sums[score.first];
+		auto& scores = score.second;
+
+		std::sort(scores.begin(), scores.end(),
+			[](const auto& L, const auto& R){ return L.first>R.first; });
+
+		auto top_scorers_count = scores.size()/10;
+		auto total_weights = 0.0, total_value = 0.0;
+
+		for(auto i = (size_t)0; i<top_scorers_count; ++i){
+			auto weight = scores[i].second;
+			if(weight < 0)
+				continue;
+			total_weights += abs(scores[i].second);
+			total_value += scores[i].first*scores[i].second;
+		}
+
 		if(total_weights < 1)
 			continue;
-
-		double rating = score.second /total_weights;
-		if(rating < 0)
+		
+		total_value /= total_weights;
+		if(total_value < 0)
 			continue;
-
-		if(rating_counts[score.first] > 40)
-			values[type].push_back({score.first, rating});
+		
+		values[type].push_back({score.first, total_value});
 	}
 
 	return values;

@@ -35,8 +35,10 @@ string jsonify(const map<media_type, media_values>& recs){
 	return json;
 }
 
-void recommendations_job(const string& job, redis& data_store){
-	auto recs = recommendations(job, data_store);
+void recommendations_job
+(const string& job, redis& data_store, const vector<user_scores>& all_ratings)
+{
+	auto recs = recommendations(job, data_store, all_ratings);
 	
 	auto json = jsonify(recs);
 
@@ -51,6 +53,12 @@ int main(){
 	string queue = RECOMMENDATION_QUEUE;
 
 	auto r = redis_connect();
+
+	vector<user_scores> all_ratings;
+	for(auto name : all_usernames(*r)){
+		auto scores = get_scores(name, *r);
+		all_ratings.push_back(scores);
+	}
 
 	while(true){
 		string job;
@@ -81,7 +89,7 @@ int main(){
 		r->sync_commit();
 		cout<<"processing "<<job<<endl;
 		
-		recommendations_job(job, *r);
+		recommendations_job(job, *r, all_ratings);
 	}
 
 	cin.get();

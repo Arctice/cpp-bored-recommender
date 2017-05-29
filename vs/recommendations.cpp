@@ -41,7 +41,7 @@ double pearson_correlation
 }
 
 map<media_type, media_values> media_score_values
-(user_scores source, redis& data_store)
+(user_scores source, redis& data_store, const vector<user_scores>& all_ratings)
 {
 	map<media_id, vector<pair<double, double>>> media_weights;
 	
@@ -50,8 +50,8 @@ map<media_type, media_values> media_score_values
 	auto active_mean = active_user_data.second;
 	auto active_vector = active_user_data.first;
 
-	for(const auto& user:all_usernames(data_store)){
-		auto scores = get_scores(user, data_store).scores;
+	for(const auto& user : all_ratings){
+		const auto& scores = user.scores;
 		auto neighbour_data = normalize_scores(scores);
 		auto neighbour_vector = neighbour_data.first;
 		auto neighbour_mean = neighbour_data.second;
@@ -103,10 +103,10 @@ map<media_type, media_values> media_score_values
 }
 
 map<media_type, media_values> recommendations
-(const string& name, redis& data_store)
+(const string& name, redis& data_store, const vector<user_scores>& all_ratings)
 {
 	auto source = get_scores(name, data_store, false);
-	auto media_weights = media_score_values(source, data_store);
+	auto media_weights = media_score_values(source, data_store, all_ratings);
 
 	auto rated_source = get_scores(name, data_store, true);
 
